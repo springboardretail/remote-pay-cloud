@@ -1,36 +1,25 @@
-import http = require('http');
-
-import {HttpSupport} from '../../../../util/HttpSupport';
-import {Endpoints} from '../../../../util/Endpoints';
-import {DeviceContactInfo} from '../../../../util/DeviceContactInfo';
-
-import {WebSocketState} from '../../../../websocket/WebSocketState';
-import {CloverWebSocketClient} from './CloverWebSocketClient';
-
-import {WebSocketCloverTransport} from "./WebSocketCloverTransport";
-
+"use strict";
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+var Endpoints_1 = require("../../../../util/Endpoints");
+var DeviceContactInfo_1 = require("../../../../util/DeviceContactInfo");
+var WebSocketState_1 = require("../../../../websocket/WebSocketState");
+var WebSocketCloverTransport_1 = require("./WebSocketCloverTransport");
 /**
  * WebSocket Cloud Clover Transport.  This handles the need to notify the device before a connection attempt is made.
  *
  */
-export class WebSocketCloudCloverTransport extends WebSocketCloverTransport {
-
-    /**
-     * HTTP Header key that helps identify the connected client.  Typically set to the
-     * 'friendlyId'.
-     *
-     * @type {string}
-     */
-    static X_CLOVER_CONNECTED_ID: string = "X-CLOVER-CONNECTED-ID";
-
-    private httpSupport: HttpSupport;
-    private cloverServer: string;
-    private merchantId: string;
-    private accessToken: string;
-    private deviceId: string;
-    private friendlyId: string;
-    private forceConnect: boolean;
-
+var WebSocketCloudCloverTransport = (function (_super) {
+    __extends(WebSocketCloudCloverTransport, _super);
     /**
      * @param {number} heartbeatInterval - duration to wait for a PING before disconnecting
      * @param {number} reconnectDelay - duration to wait until a reconnect is attempted
@@ -48,29 +37,18 @@ export class WebSocketCloudCloverTransport extends WebSocketCloverTransport {
      * @param {boolean} forceConnect - if true, overtake any existing connection.
      * @param {HttpSupport} httpSupport - the helper object used when making http requests.
      */
-    public constructor(heartbeatInterval: number,
-                       reconnectDelay: number,
-                       retriesUntilDisconnect: number,
-                       webSocketImplClass: any,
-                       cloverServer: string,
-                       merchantId: string,
-                       accessToken: string,
-                       deviceId: string,
-                       friendlyId: string,
-                       forceConnect: boolean,
-                       httpSupport: HttpSupport) {
-        super(heartbeatInterval, reconnectDelay, retriesUntilDisconnect, webSocketImplClass);
-        this.cloverServer = cloverServer;
-        this.merchantId = merchantId;
-        this.accessToken = accessToken;
-        this.deviceId = deviceId;
-        this.httpSupport = httpSupport;
-        this.friendlyId = friendlyId;
-        this.forceConnect = forceConnect;
-
-        this.initialize();
+    function WebSocketCloudCloverTransport(heartbeatInterval, reconnectDelay, retriesUntilDisconnect, webSocketImplClass, cloverServer, merchantId, accessToken, deviceId, friendlyId, forceConnect, httpSupport) {
+        var _this = _super.call(this, heartbeatInterval, reconnectDelay, retriesUntilDisconnect, webSocketImplClass) || this;
+        _this.cloverServer = cloverServer;
+        _this.merchantId = merchantId;
+        _this.accessToken = accessToken;
+        _this.deviceId = deviceId;
+        _this.httpSupport = httpSupport;
+        _this.friendlyId = friendlyId;
+        _this.forceConnect = forceConnect;
+        _this.initialize();
+        return _this;
     }
-
     /**
      * The cloud needs to call an endpoint on the server to notify the device that it wants
      * to talk.  This requires a valid OAuth access token, and we also need to know which Clover
@@ -82,22 +60,19 @@ export class WebSocketCloudCloverTransport extends WebSocketCloverTransport {
      * If an attempt is being made to reconnect, when this fails, it will set the 'reconnecting' flag to
      * false to allow another reconnect attempt to be started by a separate 'thread'.
      */
-    protected initialize(): void {
+    WebSocketCloudCloverTransport.prototype.initialize = function () {
+        var _this = this;
         // Do the notification call.  This needs to happen every time we attempt to connect.
         // It COULD mean that the device gets a notification when the Cloud Pay Display is
         // already running, but this is not harmful.
-        let alertEndpoint: string = Endpoints.getAlertDeviceEndpoint(this.cloverServer, this.merchantId, this.accessToken);
-        let deviceContactInfo: DeviceContactInfo = new DeviceContactInfo(this.deviceId.replace(/-/g, ""), true);
-        this.httpSupport.postData(alertEndpoint,
-            (data) => this.deviceNotificationSent(data),
-            (error) => {
-                this.connectionError(this.cloverWebSocketClient, `Error sending alert to device. Details: ${error.message}`);
-                // This may end a reconnect attempt
-                this.setReconnecting(false);
-            },
-            deviceContactInfo);
-    }
-
+        var alertEndpoint = Endpoints_1.Endpoints.getAlertDeviceEndpoint(this.cloverServer, this.merchantId, this.accessToken);
+        var deviceContactInfo = new DeviceContactInfo_1.DeviceContactInfo(this.deviceId.replace(/-/g, ""), true);
+        this.httpSupport.postData(alertEndpoint, function (data) { return _this.deviceNotificationSent(data); }, function (error) {
+            _this.connectionError(_this.cloverWebSocketClient, "Error sending alert to device. Details: " + error.message);
+            // This may end a reconnect attempt
+            _this.setReconnecting(false);
+        }, deviceContactInfo);
+    };
     /**
      * This handles the response from the server of the request to send a notification to the device. If the
      * notification was successful, then an OPTIONS call is made using the information provided.
@@ -106,47 +81,44 @@ export class WebSocketCloudCloverTransport extends WebSocketCloverTransport {
      *  was sent to the device.  If it was, then the properties 'host' and 'token' are used to derive the
      *  websocket endpoint uri.
      */
-    private deviceNotificationSent(notificationResponse: any): void {
+    WebSocketCloudCloverTransport.prototype.deviceNotificationSent = function (notificationResponse) {
         // Note "!data.hasOwnProperty('sent')" is included to allow for
         // backwards compatibility.  If the property is NOT included, then
         // we will assume an earlier version of the protocol on the server,
         // and assume that the notification WAS SENT.
         if (!notificationResponse.hasOwnProperty('sent') || notificationResponse.sent) {
-            let deviceWebSocketEndpoint: string = Endpoints.getDeviceWebSocketEndpoint(
-                notificationResponse.host, notificationResponse.token, this.friendlyId, this.forceConnect);
+            var deviceWebSocketEndpoint = Endpoints_1.Endpoints.getDeviceWebSocketEndpoint(notificationResponse.host, notificationResponse.token, this.friendlyId, this.forceConnect);
             this.doOptionsCallToAvoid401Error(deviceWebSocketEndpoint);
-        } else {
+        }
+        else {
             this.connectionError(this.cloverWebSocketClient, "Could not send alert to device.");
             // This may end a reconnect attempt
             this.setReconnecting(false);
         }
-    }
-
+    };
     /**
      * Do an OPTIONS call to the web socket endpoint (using http).  This helps with a problem where a 401
      * response came back from the websocket endpoint.
      *
      * @param deviceWebSocketEndpoint
      */
-    private doOptionsCallToAvoid401Error(deviceWebSocketEndpoint: string): void {
+    WebSocketCloudCloverTransport.prototype.doOptionsCallToAvoid401Error = function (deviceWebSocketEndpoint) {
+        var _this = this;
         // A way to deal with the 401 error that
         // occurs when a websocket connection is made to the
         // server (sometimes).  Do a preliminary OPTIONS
         // request.  Although this happens regardless of if the error
         // happens, it is tremendously faster.
         var deviceWebSocketEndpointCopy = deviceWebSocketEndpoint;
-
         var httpUrl = null;
         if (deviceWebSocketEndpointCopy.indexOf("wss") > -1) {
             httpUrl = deviceWebSocketEndpointCopy.replace("wss", "https");
-        } else {
+        }
+        else {
             httpUrl = deviceWebSocketEndpointCopy.replace("ws", "http");
         }
-        this.httpSupport.options(httpUrl,
-            (data, xmlHttpReqImpl) => this.afterOptionsCall(deviceWebSocketEndpoint, xmlHttpReqImpl),
-            (data, xmlHttpReqImpl) => this.afterOptionsCall(deviceWebSocketEndpoint, xmlHttpReqImpl));
-    }
-
+        this.httpSupport.options(httpUrl, function (data, xmlHttpReqImpl) { return _this.afterOptionsCall(deviceWebSocketEndpoint, xmlHttpReqImpl); }, function (data, xmlHttpReqImpl) { return _this.afterOptionsCall(deviceWebSocketEndpoint, xmlHttpReqImpl); });
+    };
     /**
      * Handles the response to the OPTIONS call.  This helps with a 401 response, and is used to help identify
      * any existing connection to the device.
@@ -155,12 +127,12 @@ export class WebSocketCloudCloverTransport extends WebSocketCloverTransport {
      *
      * @param deviceWebSocketEndpoint
      */
-    private afterOptionsCall(deviceWebSocketEndpoint: string, xmlHttpReqImpl: any): void {
+    WebSocketCloudCloverTransport.prototype.afterOptionsCall = function (deviceWebSocketEndpoint, xmlHttpReqImpl) {
         // See com.clover.support.handler.remote_pay.RemotePayConnectionControlHandler#X_CLOVER_CONNECTED_ID
         // This checks for an existing connection, which includes the id of the terminal that is connected.
-        let connectedId = "";
+        var connectedId = "";
         if (xmlHttpReqImpl && typeof xmlHttpReqImpl["getResponseHeader"] === "function") {
-            connectedId = xmlHttpReqImpl.getResponseHeader(WebSocketCloudCloverTransport.X_CLOVER_CONNECTED_ID)
+            connectedId = xmlHttpReqImpl.getResponseHeader(WebSocketCloudCloverTransport.X_CLOVER_CONNECTED_ID);
         }
         if (connectedId && !this.forceConnect) {
             if (this.friendlyId == connectedId) {
@@ -169,31 +141,42 @@ export class WebSocketCloudCloverTransport extends WebSocketCloverTransport {
                 if (this.cloverWebSocketClient) {
                     this.cloverWebSocketClient.close();
                 }
-            } else {
+            }
+            else {
                 this.connectionError(this.cloverWebSocketClient, "Device is already connected to '" + connectedId + "'");
                 // This may end a reconnect attempt
                 this.setReconnecting(false);
                 return; // done connecting
             }
             // If the device socket is already connected and good, just return.
-            if (this.cloverWebSocketClient && this.cloverWebSocketClient.getWebSocketState() == WebSocketState.OPEN) {
+            if (this.cloverWebSocketClient && this.cloverWebSocketClient.getWebSocketState() == WebSocketState_1.WebSocketState.OPEN) {
                 // This may end a reconnect attempt
                 this.setReconnecting(false);
                 return; // done connecting
             }
         }
-        super.initializeWithUri(deviceWebSocketEndpoint);
-    }
-
+        _super.prototype.initializeWithUri.call(this, deviceWebSocketEndpoint);
+    };
     /**
      *
      * @override
      * @param ws
      */
-    public onOpen(ws: CloverWebSocketClient): void {
+    WebSocketCloudCloverTransport.prototype.onOpen = function (ws) {
         if (this.cloverWebSocketClient == ws) {
-            super.onOpen(ws);
+            _super.prototype.onOpen.call(this, ws);
             this.notifyDeviceReady();
         }
-    }
-}
+    };
+    /**
+     * HTTP Header key that helps identify the connected client.  Typically set to the
+     * 'friendlyId'.
+     *
+     * @type {string}
+     */
+    WebSocketCloudCloverTransport.X_CLOVER_CONNECTED_ID = "X-CLOVER-CONNECTED-ID";
+    return WebSocketCloudCloverTransport;
+}(WebSocketCloverTransport_1.WebSocketCloverTransport));
+exports.WebSocketCloudCloverTransport = WebSocketCloudCloverTransport;
+
+//# sourceMappingURL=../../../../../../maps/com/clover/remote/client/transport/websocket/WebSocketCloudCloverTransport.js.map
